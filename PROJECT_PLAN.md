@@ -256,6 +256,25 @@ answers free for dev and pennies at scale; and dedup turns a recurring cost into
 - **Exit criteria:** full demo, no bugs; repo clean; Loom recorded.
 - **Commits:** "feat: side-by-side cards + chat UI", "feat: citation chips seek video", "docs: README + trade-offs".
 
+### Deployment (live link required for submission)
+Same code runs local or cloud, switched by env vars (no rewrite):
+
+| Concern | Local (dev) | Cloud (deploy) |
+|---|---|---|
+| Backend | `uvicorn` on localhost | **Hugging Face Spaces** (Docker, free ~16GB RAM, no card) — handles fastembed + Whisper |
+| Vectors | Qdrant on-disk | **Qdrant Cloud** (free 1GB, no card) |
+| Sessions + cache | JSON files | **Qdrant payloads** (`STORAGE_BACKEND=qdrant`) → zero local disk |
+| IG cookies | `cookies.txt` file | `IG_COOKIES_B64` env secret → materialized to an ephemeral file at boot |
+| Frontend | `next dev` | **Vercel** (free) |
+
+**The reliability trick (also the scale story):** Instagram flags residential session cookies used from a
+**datacenter IP**, so live IG fetch can fail in prod. Fix: pre-ingest the two demo videos *locally* (where IG
+works) straight into the **Qdrant Cloud cache**; the deployed app serves them from cache with **zero live IG
+calls**. The live link is deterministic and fast. New URLs still attempt live fetch.
+
+**What breaks at scale here:** HF Spaces free tier sleeps on inactivity (cold start) and is single-instance —
+fine for a demo; production would move the backend to an autoscaled container service + a job queue for ingestion.
+
 ### Buffer / stretch (only if ahead)
 - Per-session **token/$ meter** in the UI (great cost-conversation prop).
 - Model-escalation routing (mini → gpt-4o) on comparative questions.

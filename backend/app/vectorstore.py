@@ -21,6 +21,7 @@ from qdrant_client.models import (
     FieldCondition,
     Filter,
     MatchValue,
+    PayloadSchemaType,
     PointStruct,
     Range,
     VectorParams,
@@ -35,9 +36,21 @@ _NS = uuid.UUID("00000000-0000-0000-0000-00000000c0de")  # stable namespace for 
 
 @lru_cache(maxsize=1)
 def client() -> QdrantClient:
-    c = QdrantClient(path=config.QDRANT_PATH)
+    if config.USE_CLOUD:
+        c = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)
+    else:
+        c = QdrantClient(path=config.QDRANT_PATH)
     atexit.register(c.close)  # close cleanly before shutdown (avoids __del__ teardown error)
     return c
+
+
+# Fields we filter on. Qdrant Cloud (unlike local mode) REQUIRES a payload index per
+# filtered field, so we create them explicitly and idempotently.
+_INDEXED_FIELDS = {
+    "session_id": PayloadSchemaType.KEYWORD,
+    "video_id": PayloadSchemaType.KEYWORD,
+    "start": PayloadSchemaType.FLOAT,
+}
 
 
 def ensure_collection() -> None:
@@ -47,6 +60,11 @@ def ensure_collection() -> None:
             COLLECTION,
             vectors_config=VectorParams(size=embeddings.dim(), distance=Distance.COSINE),
         )
+    for field, schema in _INDEXED_FIELDS.items():
+        try:
+            c.create_payload_index(COLLECTION, field_name=field, field_schema=schema)
+        except Exception:
+            pass  # already exists
 
 
 def upsert_video(session_id: str, video: Video) -> int:
@@ -100,3 +118,28 @@ def search(
         with_payload=True,
     )
     return [{**p.payload, "score": round(p.score, 4)} for p in res.points]
+
+
+# --- Tiny key-value store on Qdrant (used for sessions/cache in cloud mode) ---
+# These collections are never vector-searched; we only get/put by id. The 1-d vector
+# is a placeholder Qdrant requires per point.
+_KV_VEC = [1.0]
+
+
+def _kv_id(key: str) -> str:
+    return str(uuid.uuid5(_NS, key))
+
+
+def kv_put(collection: str, key: str, payload: dict) -> None:
+    c = client()
+    if not c.collection_exists(collection):
+        c.create_collection(collection, vectors_config=VectorParams(size=1, distance=Distance.DOT))
+    c.upsert(collection, points=[PointStruct(id=_kv_id(key), vector=_KV_VEC, payload=payload)])
+
+
+def kv_get(collection: str, key: str) -> dict | None:
+    c = client()
+    if not c.collection_exists(collection):
+        return None
+    pts = c.retrieve(collection, ids=[_kv_id(key)], with_payload=True)
+    return pts[0].payload if pts else None
