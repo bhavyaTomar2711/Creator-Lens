@@ -1,0 +1,27 @@
+# --- Ingestion (free) ---
+yt-dlp>=2025.1.1            # YouTube + Instagram download & metadata (free)
+youtube-transcript-api>=0.6.2  # free YouTube captions (no transcription cost)
+imageio-ffmpeg>=0.5.1      # bundled ffmpeg binary fallback (no system install needed)
+
+# --- Models (free tiers / local) ---
+groq>=0.13.0               # Groq API: Whisper transcription + LLM chat (free tier)
+fastembed>=0.4.0           # local ONNX embeddings (BAAI/bge-small) — free, no API key
+
+# --- Vector DB (free, local mode, no Docker) ---
+qdrant-client>=1.12.0      # runs embedded/on-disk locally — free
+
+# --- Orchestration (mandatory) ---
+langgraph>=0.2.50
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-groq>=0.2.0
+
+# --- API ---
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+sse-starlette>=2.1.0
+python-dotenv>=1.0.0
+pydantic>=2.9.0
+
+# --- Offline transcription fallback (optional; uncomment if no network for Groq) ---
+# faster-whisper>=1.0.0

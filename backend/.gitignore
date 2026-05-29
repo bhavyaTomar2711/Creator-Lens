@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+cookies.txt
+data/
+qdrant_data/
+
+# .env.example MUST be committed (root .gitignore's ".env*" would otherwise hide it)
+!.env.example
