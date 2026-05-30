@@ -30,15 +30,16 @@ def _ingest_one(url: str, label: VideoLabel, overrides: dict | None = None) -> V
 
 
 def ingest_pair(
-    youtube_url: str,
-    instagram_url: str,
+    url_a: str,
+    url_b: str,
     overrides_a: dict | None = None,
     overrides_b: dict | None = None,
 ) -> dict:
+    """Ingest two videos (each YouTube or Instagram — auto-detected) into a session."""
     session_id = uuid.uuid4().hex
 
-    video_a = _ingest_one(youtube_url, "A", overrides_a)
-    video_b = _ingest_one(instagram_url, "B", overrides_b)
+    video_a = _ingest_one(url_a, "A", overrides_a)
+    video_b = _ingest_one(url_b, "B", overrides_b)
 
     chunks_a = vectorstore.upsert_video(session_id, video_a)
     chunks_b = vectorstore.upsert_video(session_id, video_b)

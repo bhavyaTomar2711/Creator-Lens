@@ -23,8 +23,9 @@ app.add_middleware(
 
 
 class IngestRequest(BaseModel):
-    youtube_url: str
-    instagram_url: str
+    # Either video may be YouTube OR Instagram — platform is auto-detected per URL.
+    url_a: str
+    url_b: str
     # optional manual overrides for fields a blocked reel can't supply (e.g. follower_count)
     overrides_a: dict | None = None
     overrides_b: dict | None = None
@@ -45,9 +46,7 @@ def health():
 @app.post("/ingest", response_model=IngestResponse)
 def ingest_pair(req: IngestRequest):
     """Ingest both videos, embed + index their chunks, and open a chat session."""
-    result = service.ingest_pair(
-        req.youtube_url, req.instagram_url, req.overrides_a, req.overrides_b
-    )
+    result = service.ingest_pair(req.url_a, req.url_b, req.overrides_a, req.overrides_b)
     return IngestResponse(**result)
 
 
